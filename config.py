@@ -39,4 +39,4 @@ sms_session_in = 2     #This will be voice call units to select the random consu
 
 
 #Configuration parameters
-script_path = "/home/ec2-user/latency-test/VERSION3/"
+script_path = "/home/ec2-user/test_edr_generator/source/"
