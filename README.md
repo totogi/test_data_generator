@@ -69,6 +69,7 @@ python createtable_cs.py
 python dbinsertcallstats.py
 ```
 12. Update config.py with below parameters.
+```
 provider_id
 mcc
 mnc
@@ -76,7 +77,7 @@ routeinfo
 mnpinfo
 offnet
 Update remaining parameters as per your requirement. 
-
+```
 13. Execute below script and select appropriate menu options to create the customer, generate the events etc. 
 
 ```
