@@ -2,7 +2,7 @@ import config
 import sqlite3
 
 script_path = config.script_path
-db_path = script_path+"dbfile/Charging1.db"
+db_path = script_path+"dbfile/Charging.db"
 
 # Connect to the database
 conn = sqlite3.connect(db_path)
