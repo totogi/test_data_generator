@@ -300,7 +300,7 @@ now = datetime.now()
 #get max of the account nuber
 conn = sqlite3.connect(db_file_path)
 accdata = conn.cursor()
-accdata.execute("SELECT max(substr(Account,-7)) FROM charging_account")
+accdata.execute("SELECT COALESCE(max(substr(Account,-7)),0) FROM charging_account")
 maxacc1=accdata.fetchone()
 maxacc=int(maxacc1[0])+1
 #get number of accounts of be activated for the current hour
@@ -327,7 +327,7 @@ for i in range(maxacc,maxacc+call_cnt):
         },
     }
     result = client.execute(createaccquery, variable_values=createaccparams)
-    #print(result)
+    print(result)
     acc_cnt += 1
     accdata.execute("insert into charging_account (Account) values (?)",(account_id,))
     conn.commit()
