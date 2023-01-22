@@ -18,7 +18,7 @@ import numpy as np
 now=datetime.now()
 
 
-#User inputs
+#Configuration parameters
 charging_url = config.charging_url
 provider_id = config.provider_id
 mcc = config.mcc
@@ -34,13 +34,15 @@ voice_session_er = config.voice_session_er
 voice_session_in = config.voice_session_in
 called_num_sr = config.called_num_sr
 called_num_er = config.called_num_er
+edr_gen_mode = config.edr_gen_mode
+edr_cnt = config.edr_cnt
 
 #Configuration parameters
 script_path = config.script_path
 log_file_name = os.path.basename(__file__).replace('.py','')
 log_file_path = script_path+"logs/"+log_file_name+".log"
 stats_file_path = script_path+"logs/"+"Stats_"+log_file_name+".log"
-db_file_path = script_path+"/Charging.db"
+db_file_path = script_path+"dbfile"+"/Charging.db"
 
 #Logger definition for log files
 logger = logging.getLogger(log_file_name)
@@ -322,11 +324,14 @@ async def main():
     accdata.execute("SELECT device FROM charging_account  where plan is not null and del_flag is null ")
     result_full=accdata.fetchall()
     #Fetch hour wise number of calls to be generated
-    hrnow = now.strftime("%H")
-    hrdata = conn.cursor()
-    hrdata.execute("SELECT voice_onnet FROM call_stats  where HOUR=?",[hrnow])
-    call_cnt1=hrdata.fetchone()
-    call_cnt=call_cnt1[0]
+    if edr_gen_mode=="DB":
+        hrnow = now.strftime("%H")
+        hrdata = conn.cursor()
+        hrdata.execute("SELECT voice_onnet FROM call_stats  where HOUR=?",[hrnow])
+        call_cnt1=hrdata.fetchone()
+        call_cnt=call_cnt1[0]
+    else:
+        call_cnt=edr_cnt
     #Check if call count is less than devices
     if int(call_cnt) > len(result_full):
         call_cnt = len(result_full)

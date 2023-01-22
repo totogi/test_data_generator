@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 import numpy as np
 
 
-#User inputs
+#Configuration parameters
 username =  config.username
 password = config.password
 provider_id= config.provider_id
@@ -25,8 +25,9 @@ cognito_url = config.cognito_url
 gql_url = config.gql_url
 min_account = config.min_account
 max_account = config.max_account
+edr_gen_mode = config.edr_gen_mode
+edr_cnt = config.edr_cnt
 
-#Configuration parameters
 script_path = config.script_path
 log_file_name = os.path.basename(__file__).replace('.py','')
 log_file_path = script_path+"logs/"+log_file_name+".log"
@@ -160,14 +161,18 @@ accdata = conn.cursor()
 accdata.execute("SELECT Account,device  FROM charging_account where plan is not null and del_flag is null")
 result_full=accdata.fetchall()
 #get number of accounts of be deactivated for the current hour
-hrnow = now.strftime("%H")
-hrdata = conn.cursor()
-hrdata.execute("SELECT  remove_customer FROM call_stats  where HOUR=?",[hrnow])
-call_cnt1=hrdata.fetchone()
-call_cnt=call_cnt1[0]
-randnum = random.randint(min_account,max_account)
-call_cnt=int(call_cnt1[0])+randnum
-results = random.sample(result_full,call_cnt)
+if edr_gen_mode=="DB":
+    hrnow = now.strftime("%H")
+    hrdata = conn.cursor()
+    hrdata.execute("SELECT  remove_customer FROM call_stats  where HOUR=?",[hrnow])
+    call_cnt1=hrdata.fetchone()
+    call_cnt=call_cnt1[0]
+    randnum = random.randint(min_account,max_account)
+    call_cnt=int(call_cnt1[0])+randnum
+    results = random.sample(result_full,call_cnt)
+else:
+    call_cnt=edr_cnt
+    results = random.sample(result_full,call_cnt)
 acc_del = 0
 dev_del = 0
 #Loop and delete

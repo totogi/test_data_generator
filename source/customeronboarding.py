@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 import numpy as np
 
 
-#User inputs
+#Configuration parameters
 username =  config.username
 password = config.password
 provider_id= config.provider_id
@@ -30,8 +30,9 @@ account_prefix = config.account_prefix
 device_series = config.device_series
 min_credit = config.min_credit
 max_credit = config.max_credit
+edr_gen_mode = config.edr_gen_mode
+edr_cnt = config.edr_cnt
 
-#Configuration parameters
 script_path = config.script_path
 log_file_name = os.path.basename(__file__).replace('.py','')
 log_file_path = script_path+"logs/"+log_file_name+".log"
@@ -303,12 +304,15 @@ accdata.execute("SELECT max(substr(Account,-7)) FROM charging_account")
 maxacc1=accdata.fetchone()
 maxacc=int(maxacc1[0])+1
 #get number of accounts of be activated for the current hour
-hrnow = now.strftime("%H")
-hrdata = conn.cursor()
-hrdata.execute("SELECT new_customer FROM call_stats  where HOUR=?",[hrnow])
-call_cnt1=hrdata.fetchone()
-randnum = random.randint(min_account,max_account)
-call_cnt=int(call_cnt1[0])+randnum
+if edr_gen_mode=="DB":
+    hrnow = now.strftime("%H")
+    hrdata = conn.cursor()
+    hrdata.execute("SELECT new_customer FROM call_stats  where HOUR=?",[hrnow])
+    call_cnt1=hrdata.fetchone()
+    randnum = random.randint(min_account,max_account)
+    call_cnt=int(call_cnt1[0])+randnum
+else:
+    call_cnt=edr_cnt
 acc_cnt = 0
 dev_cnt = 0
 

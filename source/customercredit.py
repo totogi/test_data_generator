@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 import numpy as np
 
 
-#User inputs
+#Configuration parameters
 username =  config.username
 password = config.password
 provider_id= config.provider_id
@@ -25,13 +25,16 @@ cognito_url = config.cognito_url
 gql_url = config.gql_url
 min_cnt = config.min_cnt
 max_cnt = config.max_cnt
+min_credit = config.min_credit
+max_credit = config.max_credit
+edr_gen_mode = config.edr_gen_mode
+edr_cnt = config.edr_cnt
 
-#Configuration parameters
 script_path = config.script_path
 log_file_name = os.path.basename(__file__).replace('.py','')
 log_file_path = script_path+"logs/"+log_file_name+".log"
 stats_file_path = script_path+"logs/"+"Stats_"+log_file_name+".log"
-db_file_path = script_path+"dbfile"+/"Charging.db"
+db_file_path = script_path+"dbfile"+"/Charging.db"
 
 #Logger definition for log files
 logger = logging.getLogger(log_file_name)
@@ -130,15 +133,19 @@ accdata = conn.cursor()
 accdata.execute("SELECT Account  FROM charging_account where plan is not null and del_flag is null")
 result_full=accdata.fetchall()
 #Select count of accounts for credit operation for current hour
-hrnow = now.strftime("%H")
-hrdata = conn.cursor()
-hrdata.execute("SELECT  new_customer FROM call_stats  where HOUR=?",[hrnow])
-call_cnt1=hrdata.fetchone()
-call_cnt=call_cnt1[0]
-randnum = random.randint(min_cnt,max_cnt)
-call_cnt=int(call_cnt[0])+randnum
-randnum = random.randint(min_cnt,max_cnt)
-results = random.sample(result_full,call_cnt)
+if edr_gen_mode=="DB":
+    hrnow = now.strftime("%H")
+    hrdata = conn.cursor()
+    hrdata.execute("SELECT  new_customer FROM call_stats  where HOUR=?",[hrnow])
+    call_cnt1=hrdata.fetchone()
+    call_cnt=call_cnt1[0]
+    randnum = random.randint(min_cnt,max_cnt)
+    call_cnt=int(call_cnt[0])+randnum
+    randnum = random.randint(min_cnt,max_cnt)
+    results = random.sample(result_full,call_cnt)
+else:
+    call_cnt=edr_cnt
+    results = random.sample(result_full,call_cnt)
 acc_cnt = 0
 
 for i in results:
@@ -152,6 +159,7 @@ for i in results:
         },
     }
     result = client.execute(creditamtquery, variable_values=creditamtparams)
+    #print(result)
     acc_cnt += 1
     logger.info('Account credit,{},{}'.format(account_id,credit_amount))
 conn.close()

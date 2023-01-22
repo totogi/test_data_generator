@@ -8,6 +8,10 @@ charging_url = environ['TOTOGI_CHARGING_URL']
 provider_id="e8becf15-7921-34db-802e-820716f1230f"
 mcc = "214"
 mnc = "03"
+script_path = "/home/ec2-user/latency-test/VERSION3/"
+edr_gen_mode = "FILE" #If DB is mentioned then customer creation, number of calls witll be getched from database from call_stats table else FILE then it will fetch from below parameters
+edr_cnt = 4
+
 min_account = 10 #Min random value num to activate/deactivate on hourly basis. Script will take hour wise num from DB and add this random value
 max_account = 25 #Max random value num to activate/deactivate on hourly basis. Script will take hour wise num from DB and add this random value
 plan_version_list=["7f7ffcd6-4d5f-4f11-a034-fce87014b293","36b473fe-5589-48ce-a3a7-383b9911a386","7881e3d6-31ed-4783-9be1-29b82861bba8","ee7c5d2b-8370-42c5-b462-3d6bb9eedce3","71ce1978-0eb2-43b2-819b-53fd9ce86fbe","b41f30a1-5308-4464-8737-1a1af510f79f","07ea7d16-8d32-451b-8a36-2b143e40b23f","0984d867-d27a-42ed-8013-3cbf4031141b","731ef6b6-c7ae-4a7d-b2ef-43fcda627688","59306757-cbe2-42a7-b4ee-5e3aa2b294cc"] #add plan versions to be considered for activation
@@ -37,4 +41,4 @@ sms_session_in = 2     #This will be voice call units to select the random consu
 
 
 #Configuration parameters
-script_path = "/home/ec2-user/test_data_generator/"
+script_path = "/home/ec2-user/latency-test/VERSION3/"

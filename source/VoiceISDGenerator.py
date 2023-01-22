@@ -22,7 +22,7 @@ now=datetime.now()
 import csv
 
 
-#User inputs
+#Configuration parameters
 charging_url = config.charging_url
 provider_id = config.provider_id
 mcc = config.mcc
@@ -35,8 +35,9 @@ voice_session_er = config.voice_session_er
 voice_session_in = config.voice_session_in
 isd_num_sr = config.isd_num_sr
 isd_num_er = config.isd_num_er
+edr_gen_mode = config.edr_gen_mode
+edr_cnt = config.edr_cnt
 
-#Configuration parameters
 script_path = config.script_path
 log_file_name = os.path.basename(__file__).replace('.py','')
 log_file_path = script_path+"logs/"+log_file_name+".log"
@@ -81,7 +82,7 @@ class EventGeneratorClass:
                         "X-Amz-Target": "AWSCognitoIdentityProviderService.InitiateAuth"
                 }
                 response = await self.s.request("POST", cognito_url, json=payload, headers=headers)
-                print(response)
+                #print(response)
                 token_json = response.json()
                 access_token = token_json['AuthenticationResult']['AccessToken']
                 return access_token
@@ -236,25 +237,25 @@ class EventGeneratorClass:
                 for i in range(1):
                         #Select random units for initial, update and terminate also validate consumption unit is less the requested units
                         init_requ_units=random.randrange(voice_session_sr,voice_session_er,voice_session_in)
-                        print("init_requ_units " + str(init_requ_units))
+                        #print("init_requ_units " + str(init_requ_units))
                         up_consumed_units=random.randrange(voice_session_sr,voice_session_er,voice_session_in)
-                        print("up_consumed_units " + str(up_consumed_units))
+                        #print("up_consumed_units " + str(up_consumed_units))
                         if up_consumed_units >= init_requ_units:
                                 up_consumed_units = init_requ_units
                         else:
                                 up_consumed_units = up_consumed_units
-                        print("up_consumed_units " + str(up_consumed_units))
+                        #print("up_consumed_units " + str(up_consumed_units))
                         update_requ_units=random.randrange(voice_session_sr,voice_session_er,voice_session_in)
-                        print("Up requ units " + str(update_requ_units))
+                        #print("Up requ units " + str(update_requ_units))
                         tr_consumed_units=random.randrange(voice_session_sr,voice_session_er,voice_session_in)
-                        print("Used units " + str(tr_consumed_units))
+                        #print("Used units " + str(tr_consumed_units))
                         if tr_consumed_units >= update_requ_units:
                                 tr_consumed_units = update_requ_units
                         else:
                                 tr_consumed_units = tr_consumed_units
-                        print("updated cu " + str(tr_consumed_units))
+                        #print("updated cu " + str(tr_consumed_units))
                         #Generate random ISD calls
-                        with open(config.script_path+"source"+'countrycode.csv', 'r') as ccode:
+                        with open(config.script_path+"source/"+'countrycode.csv', 'r') as ccode:
                             reader = csv.reader(ccode)
                             data = list(reader)
                             isd = random.choice(data)
@@ -323,11 +324,14 @@ async def main():
     accdata.execute("SELECT device FROM charging_account  where plan is not null and del_flag is null limit 3")
     result_full=accdata.fetchall()
     #Fetch hour wise number of calls to be generated
-    hrnow = now.strftime("%H")
-    hrdata = conn.cursor()
-    hrdata.execute("SELECT voice_isd  FROM call_stats  where HOUR=?",[hrnow])
-    call_cnt1=hrdata.fetchone()
-    call_cnt=call_cnt1[0]
+    if edr_gen_mode=="DB":
+        hrnow = now.strftime("%H")
+        hrdata = conn.cursor()
+        hrdata.execute("SELECT voice_isd  FROM call_stats  where HOUR=?",[hrnow])
+        call_cnt1=hrdata.fetchone()
+        call_cnt=call_cnt1[0]
+    else:
+        call_cnt=edr_cnt
     #Check if call count is less than devices
     if int(call_cnt) > len(result_full):
         call_cnt = len(result_full)
@@ -337,11 +341,11 @@ async def main():
     #Loop and generating the events
     for row in results:
         device_id = row[0]
-        print(device_id)
+        #print(device_id)
         result = await my_object.consume_data(device_id)
         sums = [all_results[i] + result[i] for i in range(len(all_results))]
         all_results=sums
-    print(all_results)
+    #print(all_results)
     stats_logger.info('VoiceISD, %s',str(all_results))
 
 if __name__ == "__main__":

@@ -16,8 +16,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import numpy as np
 
-
-#User inputs
+#Configuration parameters
 username =  config.username
 password = config.password
 provider_id= config.provider_id
@@ -26,8 +25,9 @@ gql_url = config.gql_url
 min_account = config.min_account
 max_account = config.max_account
 addon_plan_version_list=config.addon_plan_version_list
+edr_gen_mode = config.edr_gen_mode
+edr_cnt = config.edr_cnt
 
-#Configuration parameters
 script_path = config.script_path
 log_file_name = os.path.basename(__file__).replace('.py','')
 log_file_path = script_path+"logs/"+log_file_name+".log"
@@ -183,15 +183,19 @@ accdata = conn.cursor()
 accdata.execute("SELECT Account  FROM charging_account where plan is not null and del_flag is null")
 result_full=accdata.fetchall()
 #get number of accounts tddon o be activated for the current hour
-hrnow = now.strftime("%H")
-hrdata = conn.cursor()
-hrdata.execute("SELECT  new_customer FROM call_stats  where HOUR=?",[hrnow])
-call_cnt1=hrdata.fetchone()
-call_cnt=call_cnt1[0]
-randnum = random.randint(min_account,max_account)
-call_cnt=int(call_cnt1[0])+randnum
-results = random.sample(result_full,call_cnt)
-conn.close()
+if edr_gen_mode=="DB":
+    hrnow = now.strftime("%H")
+    hrdata = conn.cursor()
+    hrdata.execute("SELECT  new_customer FROM call_stats  where HOUR=?",[hrnow])
+    call_cnt1=hrdata.fetchone()
+    call_cnt=call_cnt1[0]
+    randnum = random.randint(min_account,max_account)
+    call_cnt=int(call_cnt1[0])+randnum
+    results = random.sample(result_full,call_cnt)
+    conn.close()
+else:
+    call_cnt=edr_cnt
+    results = random.sample(result_full,call_cnt)
 pl_cnt = 0
 for i in results:
     account_id = i[0]
@@ -209,6 +213,7 @@ for i in results:
         }
     }
     result = client.execute(subsplanquery, variable_values=subsplanparams)
+    #print(result)
     pl_cnt += 1
     logger.info('Addon activation,{},{}'.format(account_id,version_id))
 stats_logger.info('Addon_stats, {}'.format(pl_cnt))
