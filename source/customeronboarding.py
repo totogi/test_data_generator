@@ -16,7 +16,8 @@ import time
 import logging
 from logging.handlers import RotatingFileHandler
 import numpy as np
-from services.parallel_task_processor import ParallelTaskProcessor
+from services.parallel_task_processor_service import ParallelTaskProcessorService
+from services.async_gql_client_service import AsyncGqlClientService
 
 
 #Configuration parameters
@@ -59,7 +60,7 @@ stats_logger.addHandler(stats_handler)
 # Parallel Processing
 max_parallel_tasks = config.max_parallel_tasks
 parallel_tasks_enabled = config.parallel_tasks_enabled
-parallel_task_processor = ParallelTaskProcessor(parallel_tasks_enabled, max_parallel_tasks)
+parallel_task_processor = ParallelTaskProcessorService(parallel_tasks_enabled, max_parallel_tasks)
 
 #Get access token
 body = {
@@ -97,6 +98,7 @@ transport = RequestsHTTPTransport(
 
 # Create a GraphQL client using the defined transport
 client = Client(transport=transport, fetch_schema_from_transport=True)
+async_client = AsyncGqlClientService(gql_url, access_token)
 
 #create account
 

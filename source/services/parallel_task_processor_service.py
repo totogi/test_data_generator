@@ -2,7 +2,7 @@ from typing import Any, List
 from asyncio import coroutine, gather
 
 
-class ParallelTaskProcessor:
+class ParallelTaskProcessorService:
     def __init__(self, parallel_tasks_enabled: bool = False, max_parallel_tasks: int = 10, return_exceptions: bool = True) -> None:
         self.parallel_tasks_enabled = parallel_tasks_enabled
         self.max_parallel_tasks = max_parallel_tasks
