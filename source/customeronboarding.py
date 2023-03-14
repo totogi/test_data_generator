@@ -5,6 +5,7 @@ import requests # used by gql GraphQL library
 import httpx # for making REST over HTTP/2 requests to the N40 interface
 from gql import Client, gql # for making GraphQL requests to Totogi Charging API
 from gql.transport.requests import RequestsHTTPTransport
+from graphql import DocumentNode
 import random
 import json
 from datetime import datetime
@@ -15,6 +16,8 @@ import time
 import logging
 from logging.handlers import RotatingFileHandler
 import numpy as np
+from services.parallel_task_processor_service import ParallelTaskProcessorService
+from services.async_gql_client_service import AsyncGqlClientService
 
 
 #Configuration parameters
@@ -54,6 +57,11 @@ stats_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(
 stats_handler.setFormatter(stats_formatter)
 stats_logger.addHandler(stats_handler)
 
+# Parallel Processing
+max_parallel_tasks = config.max_parallel_tasks
+parallel_tasks_enabled = config.parallel_tasks_enabled
+parallel_task_processor = ParallelTaskProcessorService(parallel_tasks_enabled, max_parallel_tasks)
+
 #Get access token
 body = {
         "AuthParameters": {
@@ -90,6 +98,7 @@ transport = RequestsHTTPTransport(
 
 # Create a GraphQL client using the defined transport
 client = Client(transport=transport, fetch_schema_from_transport=True)
+async_client = AsyncGqlClientService(gql_url, access_token)
 
 #create account
 
@@ -316,59 +325,56 @@ else:
 acc_cnt = 0
 dev_cnt = 0
 
-for i in range(maxacc,maxacc+call_cnt):
+async def execute_graphql(graphql_doc: DocumentNode, graphql_variables: dict, post_execute_db_query: str, post_execute_db_query_values: tuple, print_result: bool = False) -> None:
+    result = await async_client.execute(graphql_doc, variable_values=graphql_variables)
+    if print_result:
+        print(result)
+    
+    accdata.execute(post_execute_db_query, post_execute_db_query_values)
+    conn.commit()
+
+
+async def onboard_customer(i: int) -> None:
     account_id = account_prefix+str(i).zfill(7)
     device_id = str(device_series+i)
     credit_amount = random.randint(min_credit, max_credit)
-    createaccparams = {
-    "input": {
+    base_input = {
         "providerId" : provider_id,
         "accountId" : account_id
-        },
     }
-    result = client.execute(createaccquery, variable_values=createaccparams)
-    print(result)
+    createaccparams = {"input": base_input,}
+    await execute_graphql(createaccquery, createaccparams, "insert into charging_account (Account) values (?)", (account_id,), True)
     acc_cnt += 1
-    accdata.execute("insert into charging_account (Account) values (?)",(account_id,))
-    conn.commit()
-    creditamtparams = {
-    "input": {
-        "providerId" : provider_id,
-        "accountId"  : account_id,
-        "amount"     : credit_amount
-        },
-    }
-    result = client.execute(creditamtquery, variable_values=creditamtparams)
-    accdata.execute("update charging_account set Amount=? where account=?",(credit_amount,account_id))
-    conn.commit()
+    
+    creditamtparams = {"input": (base_input | {"amount" : credit_amount}),}
+    await execute_graphql(creditamtquery, creditamtparams, "update charging_account set Amount=? where account=?", (credit_amount,account_id))
+    
     version_id=random.choice(plan_version_list)
     subsplanparams = {
-    "input" : {
-      "providerId"    : provider_id,
-      "accountId"     : account_id,
+    "input" : (base_input | {
       "planVersionId" : version_id
       #,
       #"overrides"     : [
-       #   {"name" : "purchase fee", "value" : 200},
-         # {"name" : "TemplateService3", "value" : "{ \"recurring units\" : 100 }" }
+      #   {"name" : "purchase fee", "value" : 200},
+        # {"name" : "TemplateService3", "value" : "{ \"recurring units\" : 100 }" }
       #]
-        }
+        })
     }
-    result = client.execute(subsplanquery, variable_values=subsplanparams)
-    accdata.execute("update charging_account set plan=? where account=?",(version_id,account_id))
-    conn.commit()
+    await execute_graphql(subsplanquery, subsplanparams, "update charging_account set plan=? where account=?", (version_id,account_id))
 
-    createdevparams = {
-    "input" : {
-      "providerId"    : provider_id,
-      "accountId"     : account_id,
-      "deviceId"      : device_id
-        }
-    }
-    result = client.execute(createdevquery, variable_values=createdevparams)
+    createdevparams = {"input" : (base_input | {"deviceId" : device_id})}
+    await execute_graphql(createdevquery, createdevparams, "update charging_account set Device=? where account=?", (device_id,account_id))
     dev_cnt += 1
-    accdata.execute("update charging_account set Device=? where account=?",(device_id,account_id))
-    conn.commit()
-    logger.info('customer onboarding,{},{},{},{}'.format(account_id,device_id,credit_amount,version_id))
-conn.close()
-stats_logger.info('Onboarding_stats, {},{}'.format(acc_cnt,dev_cnt))
+    
+    logger.info(f"customer onboarding,{account_id},{device_id},{credit_amount},{version_id}")
+
+
+async def main():
+    for i in range(maxacc,maxacc+call_cnt):
+        parallel_task_processor.process_task(onboard_customer(i))
+    parallel_task_processor.process_pending_tasks()
+    conn.close()
+    stats_logger.info(f"Onboarding_stats, {acc_cnt},{dev_cnt}")
+
+
+asyncio.run(main())
