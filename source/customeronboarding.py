@@ -326,7 +326,7 @@ acc_cnt = 0
 dev_cnt = 0
 
 async def execute_graphql(graphql_doc: DocumentNode, graphql_variables: dict, post_execute_db_query: str, post_execute_db_query_values: tuple, print_result: bool = False) -> None:
-    result = client.execute(graphql_doc, variable_values=graphql_variables)
+    result = await async_client.execute(graphql_doc, variable_values=graphql_variables)
     if print_result:
         print(result)
     
