@@ -42,3 +42,7 @@ sms_session_in = 2     #This will be voice call units to select the random consu
 
 #Configuration parameters
 script_path = "/home/ec2-user/test_data_generator/"
+
+# Parallel execution
+max_parallel_tasks = 10
+parallel_tasks_enabled = environ.get("PARALLEL_TASKS_ENABLED", False)
